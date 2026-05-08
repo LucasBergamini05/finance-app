@@ -1,7 +1,8 @@
 "use client";
 
 import { TransactionRow } from "./transaction-row";
-import type { Transaction } from "@/types/transaction";
+import { formatCurrency } from "@/lib/format";
+import type { TransactionView } from "@/types/transaction";
 
 function formatMonthLabel(key: string) {
   const [year, month] = key.split("-").map(Number);
@@ -12,29 +13,22 @@ function formatMonthLabel(key: string) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-export function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
 export function MonthGroup({
   month,
-  transactions,
+  views,
   onEdit,
 }: {
   month: string;
-  transactions: Transaction[];
-  onEdit: (t: Transaction) => void;
+  views: TransactionView[];
+  onEdit: (v: TransactionView) => void;
 }) {
-  const totalIncome = transactions
-    .filter((t) => t.type === "INCOME")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = views
+    .filter((v) => v.type === "INCOME")
+    .reduce((sum, v) => sum + v.displayAmount, 0);
 
-  const totalExpense = transactions
-    .filter((t) => t.type === "EXPENSE")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalExpense = views
+    .filter((v) => v.type === "EXPENSE")
+    .reduce((sum, v) => sum + v.displayAmount, 0);
 
   const balance = totalIncome - totalExpense;
 
@@ -62,8 +56,12 @@ export function MonthGroup({
       </div>
 
       <div className="rounded-xl border divide-y overflow-hidden bg-card">
-        {transactions.map((t) => (
-          <TransactionRow key={t.id} transaction={t} onEdit={onEdit} />
+        {views.map((v) => (
+          <TransactionRow
+            key={`${v.id}-${v.installmentIndex}`}
+            view={v}
+            onEdit={onEdit}
+          />
         ))}
       </div>
     </div>

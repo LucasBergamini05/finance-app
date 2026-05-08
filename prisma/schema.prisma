@@ -6,19 +6,59 @@ datasource db {
   provider = "postgresql"
 }
 
-model Transaction {
-  id          String          @id @default(cuid())
-  type        TransactionType
-  description String
-  amount      Decimal         @db.Decimal(10, 2)
-  date        DateTime
-  category    String?
-  notes       String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-}
-
 enum TransactionType {
   INCOME
   EXPENSE
+}
+
+enum PaymentMethod {
+  CASH
+  DEBIT
+  CREDIT_CARD
+  PIX
+  TRANSFER
+}
+
+enum ClosingDayType {
+  FIXED
+  RELATIVE
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  name         String
+  color        String        @default("#6366f1")
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Card {
+  id             String         @id @default(cuid())
+  name           String
+  lastFourDigits String?
+  color          String         @default("#0ea5e9")
+  closingDayType ClosingDayType @default(FIXED)
+  closingDay     Int
+  transactions   Transaction[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Transaction {
+  id                 String          @id @default(cuid())
+  type               TransactionType
+  description        String
+  amount             Decimal         @db.Decimal(10, 2)
+  date               DateTime
+  categoryId         String?
+  category           Category?       @relation(fields: [categoryId], references: [id])
+  notes              String?
+  paymentMethod      PaymentMethod?
+  cardId             String?
+  card               Card?           @relation(fields: [cardId], references: [id])
+  installments       Int             @default(1)
+  deletedAt          DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 }
