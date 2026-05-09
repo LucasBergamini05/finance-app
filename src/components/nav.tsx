@@ -7,6 +7,7 @@ const links = [
   { href: "/", label: "Transações" },
   { href: "/categories", label: "Categorias" },
   { href: "/cards", label: "Cartões" },
+  { href: "/settings", label: "Dados" },
 ];
 
 export function Nav() {

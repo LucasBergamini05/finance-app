@@ -202,3 +202,156 @@ export async function deleteRecurringThisAndFollowing(
   });
   revalidatePath("/");
 }
+
+// ── Backup (export / import) ──────────────────────────────
+
+export type BackupData = {
+  version: 1;
+  exportedAt: string;
+  categories: unknown[];
+  cards: unknown[];
+  transactions: unknown[];
+};
+
+export async function exportData(): Promise<BackupData> {
+  const [categories, cards, transactions] = await Promise.all([
+    prisma.category.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.card.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.transaction.findMany({ orderBy: { createdAt: "asc" } }),
+  ]);
+  return JSON.parse(
+    JSON.stringify({
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      categories,
+      cards,
+      transactions: transactions.map((t) => ({ ...t, amount: Number(t.amount) })),
+    })
+  );
+}
+
+type CategoryRow = {
+  id: string;
+  name: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type CardRow = {
+  id: string;
+  name: string;
+  lastFourDigits: string | null;
+  color: string;
+  closingDayType: "FIXED" | "RELATIVE";
+  closingDay: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type TransactionRow = {
+  id: string;
+  type: "INCOME" | "EXPENSE";
+  description: string;
+  amount: number | string;
+  date: string;
+  categoryId: string | null;
+  notes: string | null;
+  paymentMethod:
+    | "CASH"
+    | "DEBIT"
+    | "CREDIT_CARD"
+    | "PIX"
+    | "TRANSFER"
+    | null;
+  cardId: string | null;
+  installments: number;
+  deletedAt: string | null;
+  isRecurring: boolean;
+  recurringEndDate: string | null;
+  recurringParentId: string | null;
+  recurringExceptionMonth: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function importData(payload: BackupData) {
+  if (!payload || payload.version !== 1) {
+    throw new Error("Formato de backup inválido");
+  }
+
+  const categories = payload.categories as CategoryRow[];
+  const cards = payload.cards as CardRow[];
+  const transactions = payload.transactions as TransactionRow[];
+
+  await prisma.$transaction(async (tx) => {
+    // Wipe existing data (transactions first due to FK constraints)
+    await tx.transaction.deleteMany({});
+    await tx.category.deleteMany({});
+    await tx.card.deleteMany({});
+
+    if (categories.length > 0) {
+      await tx.category.createMany({
+        data: categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          color: c.color,
+          createdAt: new Date(c.createdAt),
+          updatedAt: new Date(c.updatedAt),
+        })),
+      });
+    }
+
+    if (cards.length > 0) {
+      await tx.card.createMany({
+        data: cards.map((c) => ({
+          id: c.id,
+          name: c.name,
+          lastFourDigits: c.lastFourDigits,
+          color: c.color,
+          closingDayType: c.closingDayType,
+          closingDay: c.closingDay,
+          createdAt: new Date(c.createdAt),
+          updatedAt: new Date(c.updatedAt),
+        })),
+      });
+    }
+
+    if (transactions.length > 0) {
+      // Insert non-exception transactions first (exceptions reference parents)
+      const parents = transactions.filter((t) => !t.recurringParentId);
+      const exceptions = transactions.filter((t) => t.recurringParentId);
+
+      const toRow = (t: TransactionRow) => ({
+        id: t.id,
+        type: t.type,
+        description: t.description,
+        amount: t.amount as never,
+        date: new Date(t.date),
+        categoryId: t.categoryId,
+        notes: t.notes,
+        paymentMethod: t.paymentMethod,
+        cardId: t.cardId,
+        installments: t.installments,
+        deletedAt: t.deletedAt ? new Date(t.deletedAt) : null,
+        isRecurring: t.isRecurring,
+        recurringEndDate: t.recurringEndDate ? new Date(t.recurringEndDate) : null,
+        recurringParentId: t.recurringParentId,
+        recurringExceptionMonth: t.recurringExceptionMonth,
+        createdAt: new Date(t.createdAt),
+        updatedAt: new Date(t.updatedAt),
+      });
+
+      if (parents.length > 0) {
+        await tx.transaction.createMany({ data: parents.map(toRow) });
+      }
+      if (exceptions.length > 0) {
+        await tx.transaction.createMany({ data: exceptions.map(toRow) });
+      }
+    }
+  });
+
+  revalidatePath("/");
+  revalidatePath("/categories");
+  revalidatePath("/cards");
+}
