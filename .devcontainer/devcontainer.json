@@ -11,7 +11,8 @@
         "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint",
         "Prisma.prisma",
-        "anthropic.claude-code"
+        "anthropic.claude-code",
+        "bradlc.vscode-tailwindcss"
       ]
     }
   }
