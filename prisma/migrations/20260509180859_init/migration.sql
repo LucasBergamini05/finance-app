@@ -1,26 +1,11 @@
-/*
-  Warnings:
+-- CreateEnum
+CREATE TYPE "TransactionType" AS ENUM ('INCOME', 'EXPENSE');
 
-  - You are about to drop the column `category` on the `Transaction` table. All the data in the column will be lost.
-
-*/
 -- CreateEnum
 CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'DEBIT', 'CREDIT_CARD', 'PIX', 'TRANSFER');
 
 -- CreateEnum
 CREATE TYPE "ClosingDayType" AS ENUM ('FIXED', 'RELATIVE');
-
--- AlterTable
-ALTER TABLE "Transaction" DROP COLUMN "category",
-ADD COLUMN     "cardId" TEXT,
-ADD COLUMN     "categoryId" TEXT,
-ADD COLUMN     "deletedAt" TIMESTAMP(3),
-ADD COLUMN     "installments" INTEGER NOT NULL DEFAULT 1,
-ADD COLUMN     "isRecurring" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "paymentMethod" "PaymentMethod",
-ADD COLUMN     "recurringEndDate" TIMESTAMP(3),
-ADD COLUMN     "recurringExceptionMonth" TEXT,
-ADD COLUMN     "recurringParentId" TEXT;
 
 -- CreateTable
 CREATE TABLE "Category" (
@@ -45,6 +30,29 @@ CREATE TABLE "Card" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Card_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Transaction" (
+    "id" TEXT NOT NULL,
+    "type" "TransactionType" NOT NULL,
+    "description" TEXT NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "categoryId" TEXT,
+    "notes" TEXT,
+    "paymentMethod" "PaymentMethod",
+    "cardId" TEXT,
+    "installments" INTEGER NOT NULL DEFAULT 1,
+    "deletedAt" TIMESTAMP(3),
+    "isRecurring" BOOLEAN NOT NULL DEFAULT false,
+    "recurringEndDate" TIMESTAMP(3),
+    "recurringParentId" TEXT,
+    "recurringExceptionMonth" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Transaction_pkey" PRIMARY KEY ("id")
 );
 
 -- AddForeignKey
