@@ -17,10 +17,12 @@ export function MonthGroup({
   month,
   views,
   onEdit,
+  onDelete,
 }: {
   month: string;
   views: TransactionView[];
   onEdit: (v: TransactionView) => void;
+  onDelete: (v: TransactionView) => void;
 }) {
   const totalIncome = views
     .filter((v) => v.type === "INCOME")
@@ -58,9 +60,10 @@ export function MonthGroup({
       <div className="rounded-xl border divide-y overflow-hidden bg-card">
         {views.map((v) => (
           <TransactionRow
-            key={`${v.id}-${v.installmentIndex}`}
+            key={`${v.id}-${v.installmentIndex}-${v.recurringMonth ?? ""}`}
             view={v}
             onEdit={onEdit}
+            onDelete={onDelete}
           />
         ))}
       </div>

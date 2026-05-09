@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createTransaction, updateTransaction } from "@/app/actions";
 import { formatCurrency } from "@/lib/format";
-import type { Transaction, Category, Card } from "@/types/transaction";
+import type { Transaction, Category, Card, TransactionFormData } from "@/types/transaction";
 
 const schema = z
   .object({
@@ -37,6 +37,7 @@ const schema = z
       .optional(),
     cardId: z.string().optional(),
     installments: z.number().min(1).max(48).optional(),
+    isRecurring: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     if (
@@ -72,12 +73,14 @@ export function TransactionForm({
   transaction,
   categories,
   cards,
+  onSubmitOverride,
 }: {
   open: boolean;
   onClose: () => void;
   transaction?: Transaction | null;
   categories: Category[];
   cards: Card[];
+  onSubmitOverride?: (data: TransactionFormData) => Promise<void>;
 }) {
   const [isPending, startTransition] = useTransition();
   const isEditing = !!transaction;
@@ -97,6 +100,7 @@ export function TransactionForm({
       amount: 0,
       date: todayISO(),
       installments: 1,
+      isRecurring: false,
     },
   });
 
@@ -113,6 +117,7 @@ export function TransactionForm({
           paymentMethod: transaction.paymentMethod ?? undefined,
           cardId: transaction.cardId ?? undefined,
           installments: transaction.installments ?? 1,
+          isRecurring: transaction.isRecurring,
         });
       } else {
         reset({
@@ -121,6 +126,7 @@ export function TransactionForm({
           amount: 0,
           date: todayISO(),
           installments: 1,
+          isRecurring: false,
         });
       }
     }
@@ -128,7 +134,9 @@ export function TransactionForm({
 
   function onSubmit(data: FormData) {
     startTransition(async () => {
-      if (isEditing) {
+      if (onSubmitOverride) {
+        await onSubmitOverride(data);
+      } else if (isEditing) {
         await updateTransaction(transaction.id, data);
       } else {
         await createTransaction(data);
@@ -142,6 +150,7 @@ export function TransactionForm({
   const cardId = watch("cardId");
   const installments = watch("installments") ?? 1;
   const amount = watch("amount") ?? 0;
+  const isRecurring = watch("isRecurring");
 
   const showPayment = typeValue === "EXPENSE";
   const showCard = showPayment && paymentMethod === "CREDIT_CARD";
@@ -220,42 +229,56 @@ export function TransactionForm({
             </div>
           </div>
 
-          {/* Categoria */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              Categoria{" "}
-              <span className="text-muted-foreground font-normal text-xs">
-                (opcional)
-              </span>
+          {/* Transação fixa — somente na criação */}
+          {!isEditing && (
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-input accent-primary"
+                {...register("isRecurring")}
+              />
+              <span className="font-medium">Transação fixa (mensal)</span>
             </label>
-            <Select
-              value={(watch("categoryId") as string | undefined) || "__none__"}
-              onValueChange={(v) =>
-                setValue("categoryId", v === "__none__" ? undefined : v)
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecionar categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Sem categoria</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full inline-block"
-                        style={{ backgroundColor: cat.color }}
-                      />
-                      {cat.name}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          )}
 
-          {/* Forma de pagamento (só para EXPENSE) */}
-          {showPayment && (
+          {/* Categoria */}
+          {!isRecurring && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Categoria{" "}
+                <span className="text-muted-foreground font-normal text-xs">
+                  (opcional)
+                </span>
+              </label>
+              <Select
+                value={(watch("categoryId") as string | undefined) || "__none__"}
+                onValueChange={(v) =>
+                  setValue("categoryId", v === "__none__" ? undefined : v)
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecionar categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem categoria</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full inline-block"
+                          style={{ backgroundColor: cat.color }}
+                        />
+                        {cat.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Forma de pagamento (só para EXPENSE e não recorrente) */}
+          {showPayment && !isRecurring && (
             <div className="space-y-1.5">
               <label className="text-sm font-medium">
                 Forma de pagamento{" "}
@@ -293,7 +316,7 @@ export function TransactionForm({
           )}
 
           {/* Cartão (só crédito) */}
-          {showCard && (
+          {showCard && !isRecurring && (
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Cartão</label>
               {cards.length === 0 ? (
@@ -338,7 +361,7 @@ export function TransactionForm({
           )}
 
           {/* Parcelas (só crédito, só na criação) */}
-          {showInstallments && (
+          {showInstallments && !isRecurring && (
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Parcelas</label>
               <Select
@@ -369,15 +392,17 @@ export function TransactionForm({
           )}
 
           {/* Notas */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              Notas{" "}
-              <span className="text-muted-foreground font-normal text-xs">
-                (opcional)
-              </span>
-            </label>
-            <Input {...register("notes")} placeholder="Observações..." />
-          </div>
+          {!isRecurring && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                Notas{" "}
+                <span className="text-muted-foreground font-normal text-xs">
+                  (opcional)
+                </span>
+              </label>
+              <Input {...register("notes")} placeholder="Observações..." />
+            </div>
+          )}
 
           <DialogFooter className="pt-2">
             <Button

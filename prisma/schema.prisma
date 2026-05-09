@@ -46,19 +46,25 @@ model Card {
 }
 
 model Transaction {
-  id                 String          @id @default(cuid())
-  type               TransactionType
-  description        String
-  amount             Decimal         @db.Decimal(10, 2)
-  date               DateTime
-  categoryId         String?
-  category           Category?       @relation(fields: [categoryId], references: [id])
-  notes              String?
-  paymentMethod      PaymentMethod?
-  cardId             String?
-  card               Card?           @relation(fields: [cardId], references: [id])
-  installments       Int             @default(1)
-  deletedAt          DateTime?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  id                      String          @id @default(cuid())
+  type                    TransactionType
+  description             String
+  amount                  Decimal         @db.Decimal(10, 2)
+  date                    DateTime
+  categoryId              String?
+  category                Category?       @relation(fields: [categoryId], references: [id])
+  notes                   String?
+  paymentMethod           PaymentMethod?
+  cardId                  String?
+  card                    Card?           @relation(fields: [cardId], references: [id])
+  installments            Int             @default(1)
+  deletedAt               DateTime?
+  isRecurring             Boolean         @default(false)
+  recurringEndDate        DateTime?
+  recurringParentId       String?
+  recurringParent         Transaction?    @relation("RecurringExceptions", fields: [recurringParentId], references: [id], onDelete: Cascade)
+  recurringExceptions     Transaction[]   @relation("RecurringExceptions")
+  recurringExceptionMonth String?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
 }
