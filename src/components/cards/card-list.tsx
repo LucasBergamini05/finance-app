@@ -225,8 +225,8 @@ export function CardList({ cards }: { cards: Card[] }) {
                 <label className="text-sm font-medium">Fechamento</label>
                 <Select
                   value={form.closingDayType}
-                  onValueChange={(v: string | null) =>
-                    v && set("closingDayType", v as "FIXED" | "RELATIVE")
+                  onValueChange={(v) =>
+                    set("closingDayType", v as "FIXED" | "RELATIVE")
                   }
                 >
                   <SelectTrigger className="w-full">

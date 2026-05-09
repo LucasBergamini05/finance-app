@@ -162,8 +162,7 @@ export function TransactionForm({
             <label className="text-sm font-medium">Tipo</label>
             <Select
               value={typeValue}
-              onValueChange={(v: string | null) => {
-                if (!v) return;
+              onValueChange={(v) => {
                 setValue("type", v as "INCOME" | "EXPENSE");
                 if (v === "INCOME") {
                   setValue("paymentMethod", undefined);
@@ -231,8 +230,8 @@ export function TransactionForm({
             </label>
             <Select
               value={(watch("categoryId") as string | undefined) || "__none__"}
-              onValueChange={(v: string | null) =>
-                setValue("categoryId", !v || v === "__none__" ? undefined : v)
+              onValueChange={(v) =>
+                setValue("categoryId", v === "__none__" ? undefined : v)
               }
             >
               <SelectTrigger className="w-full">
@@ -266,9 +265,9 @@ export function TransactionForm({
               </label>
               <Select
                 value={paymentMethod ?? "__none__"}
-                onValueChange={(v: string | null) => {
+                onValueChange={(v) => {
                   const val =
-                    !v || v === "__none__"
+                    v === "__none__"
                       ? undefined
                       : (v as FormData["paymentMethod"]);
                   setValue("paymentMethod", val);
@@ -305,7 +304,7 @@ export function TransactionForm({
               ) : (
                 <Select
                   value={(cardId as string | undefined) || ""}
-                  onValueChange={(v: string | null) => setValue("cardId", v ?? undefined)}
+                  onValueChange={(v) => setValue("cardId", v || undefined)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecionar cartão" />
@@ -344,9 +343,7 @@ export function TransactionForm({
               <label className="text-sm font-medium">Parcelas</label>
               <Select
                 value={String(installments)}
-                onValueChange={(v: string | null) =>
-                  setValue("installments", v ? Number(v) : 1)
-                }
+                onValueChange={(v) => setValue("installments", Number(v) || 1)}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
