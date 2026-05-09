@@ -19,7 +19,8 @@ function nextMonth(yyyymm: string): string {
 
 function expandTransactions(
   transactions: Transaction[],
-  exceptionMap: Map<string, Map<string, Transaction>>
+  exceptionMap: Map<string, Map<string, Transaction>>,
+  cardClosingDays: Map<string, number>
 ): TransactionView[] {
   const views: TransactionView[] = [];
   const todayMonth = new Date().toISOString().slice(0, 7);
@@ -34,8 +35,11 @@ function expandTransactions(
       continue;
     }
     if (t.installments > 1) {
+      const purchaseDay = Number(t.date.slice(8, 10));
+      const closingDay = t.cardId ? (cardClosingDays.get(t.cardId) ?? 0) : 0;
+      const offset = closingDay > 0 && purchaseDay > closingDay ? 1 : 0;
       for (let i = 0; i < t.installments; i++) {
-        const virtualDate = addMonths(t.date, i);
+        const virtualDate = addMonths(t.date, i + offset);
         views.push({
           ...t,
           installmentIndex: i + 1,
@@ -147,7 +151,8 @@ export default async function Home() {
     exceptionMap.get(e.recurringParentId)!.set(e.recurringExceptionMonth, mapped);
   }
 
-  const views = expandTransactions(transactions, exceptionMap);
+  const cardClosingDays = new Map(rawCards.map((c) => [c.id, c.closingDay]));
+  const views = expandTransactions(transactions, exceptionMap, cardClosingDays);
 
   const cards = rawCards.map((c) => ({
     ...c,
