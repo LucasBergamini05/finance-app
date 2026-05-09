@@ -2,7 +2,6 @@ version: "3.9"
 
 services:
   app:
-    container_name: finance-app
     image: mcr.microsoft.com/devcontainers/javascript-node:22
     volumes:
       - ..:/workspace:cached
@@ -14,15 +13,14 @@ services:
 
   db:
     image: postgres:16
-    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: finance
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: dev
     ports:
-      - "5432:5432"
+      - "5430:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - data:/var/lib/postgresql/data
 
 volumes:
-  postgres-data:
+  data:
