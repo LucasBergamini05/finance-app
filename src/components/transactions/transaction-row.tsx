@@ -37,7 +37,7 @@ export function TransactionRow({
 
       {/* Description + meta */}
       <div className="flex-1 min-w-0">
-        <p className="font-medium truncate flex items-center gap-1.5">
+        <p className="font-medium flex items-center gap-1.5">
           {v.isRecurring && (
             <Repeat2 className="h-3 w-3 shrink-0 text-muted-foreground" />
           )}
