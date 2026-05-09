@@ -1,0 +1,25 @@
+{
+  "name": "finance-app",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "Prisma.prisma"
+      ]
+    }
+  },
+
+  "forwardPorts": [3000, 5432],
+  "postCreateCommand": "npm install"
+}
